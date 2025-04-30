@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "newArchEnabled": true,
+    "name": "cercaya",
+    "slug": "cercaya",
+    "version": "1.0.3",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAi74ncqQbpq25twTCZD7eFuGFmclPa6i4"
+        }
+      },
+      "package": "com.carlosordaz.cercaya",
+      "versionCode": 16
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e4d722ff-630a-4d54-bf1b-d7ac2acd434c"
+      }
+    }
+  }
+}
