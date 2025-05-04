@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { View, TouchableOpacity, Text, Alert, Modal, StyleSheet } from 'react-native';
-import MapView, { Circle, Marker, Polyline } from 'react-native-maps';
+import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { customMapStyle } from '../utils/CustomStyle';
 import { MainContext } from '../contexts/MainContextScreen';
@@ -52,23 +52,15 @@ export default function MapaScreen() {
 
     const getRouteDirections = async () => {
         if (!position || !destination) return;
-
-        const origin = `${position.latitude},${position.longitude}`;
-        const dest = `${destination.latitude},${destination.longitude}`;
-        const apiKey = CONFIG.apiKey;
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${dest}&key=${apiKey}`;
-
-        try {
-            const response = await axios.get(url);
-            if (response.data.routes && response.data.routes.length) {
-                const points = polyline.decode(response.data.routes[0].overview_polyline.points);
-                const routeCoordinates = points.map(([latitude, longitude]) => ({ latitude, longitude }));
-                setRouteCoords(routeCoordinates);
-                sendNotification();
-            }
-        } catch (error) {
-            console.error('Error al obtener la ruta:', error);
-        }
+        const url = `http://192.168.18.8:8000/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
+        axios.get(url)
+            .then(response => {
+                setRouteCoords(response.data);
+                //sendNotification();
+            })
+            .catch(error => {
+                Alert.alert('Error', 'No se pudo obtener la ruta.');
+            })
     };
     const sendNotification = async () => {
         const recomendacionesViaje = [
@@ -166,6 +158,7 @@ export default function MapaScreen() {
                 style={{ width: '100%', height: '100%' }}
                 customMapStyle={customMapStyle}
                 showsUserLocation={true}
+                provider={PROVIDER_GOOGLE}
                 initialRegion={{
                     ...position,
                     latitudeDelta: 0.008,

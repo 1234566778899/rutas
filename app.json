@@ -29,7 +29,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyAi74ncqQbpq25twTCZD7eFuGFmclPa6i4"
+          "apiKey": "AIzaSyASTGwtuWbfdxd-qWIleIB9ypTAVMc9BpA"
         }
       },
       "package": "com.carlosordaz.cercaya",
@@ -40,8 +40,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e4d722ff-630a-4d54-bf1b-d7ac2acd434c"
+        "projectId": "40ed58e5-9efc-4d55-ab0f-7061309786fc"
       }
-    }
+    },
+    "owner": "carlosordazhoyos"
   }
 }
