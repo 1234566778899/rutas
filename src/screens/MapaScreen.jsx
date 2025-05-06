@@ -183,7 +183,7 @@ export default function MapaScreen() {
                     <Circle
                         key={`danger-circle-${index}`}
                         center={marker}
-                        radius={100} // Radio en metros
+                        radius={50} // Radio en metros
                         strokeColor="rgba(255, 0, 0, 0.8)" // Color del borde del círculo
                         fillColor="rgba(255, 0, 0, 0.3)" // Color de relleno del círculo
                     />
