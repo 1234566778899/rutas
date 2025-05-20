@@ -7,10 +7,9 @@ import {
     Animated,
     Easing,
 } from 'react-native';
-import { PermissionsAndroid, Alert, Linking, Share, Platform } from 'react-native';
+import { Alert, Linking, Share } from 'react-native';
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
-import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 export default function EmergyScreen() {
     const [active, setActive] = useState(false);
     const pulse1 = useRef(new Animated.Value(0)).current;
@@ -34,43 +33,28 @@ export default function EmergyScreen() {
             ]),
         ).start();
     };
-    async function sendLocation({ phone = null, whatsapp = true }) {
+    async function sendLocation() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Ubicación denegada');
+            Alert.alert('Permiso de ubicación denegado');
             return;
         }
-
         const { coords } = await Location.getCurrentPositionAsync({});
         const mapsUrl = `https://www.google.com/maps?q=${coords.latitude},${coords.longitude}`;
         const message = `¡Emergencia! Este es mi punto: ${mapsUrl}`;
-
-        if (whatsapp) {
-            const wa = phone
-                ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-                : `whatsapp://send?text=${encodeURIComponent(message)}`; // ← sin número
-
-            if (await Linking.canOpenURL(wa)) {
-                return Linking.openURL(wa);
-            }
-        }
-
-        // SMS / Share de respaldo
-        if (await SMS.isAvailableAsync()) {
-            return SMS.sendSMSAsync(phone ? [phone] : [], message);
+        const waUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+        if (await Linking.canOpenURL(waUrl)) {
+            return Linking.openURL(waUrl);
         }
         return Share.share({ message });
     }
-
-
-
     const handleHelp = async () => {
         if (active) return;
         startPulse(pulse1, 0);
         startPulse(pulse2, 600);
         startPulse(pulse3, 1200);
         setActive(true);
-        await sendLocation({ phone: '51904435631' });
+        await sendLocation();
     };
     const handleCancel = () => {
         setActive(false)
