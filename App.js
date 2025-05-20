@@ -11,8 +11,11 @@ import EmergencyScreen from './src/screens/EmergencyScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import { ListScreen } from './src/screens/ListScreen';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './src/firebase'; // asegúrate que el path sea correcto
+import { auth } from './src/firebase';
 import { ActivityIndicator, View } from 'react-native';
+import MenuScreen from './src/screens/MenuScreen';
+import SurvayScreen from './src/screens/SurvayScreen';
+
 const Stack = createNativeStackNavigator();
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
@@ -37,19 +40,23 @@ export default function App() {
     );
   }
   return (
+
     <MainContextScreen>
       <NavigationContainer>
+
         <Stack.Navigator initialRouteName={initialRoute}>
           <Stack.Screen name='main' component={HomeScreen} options={{ title: 'main', headerShown: false }} />
           <Stack.Screen name='login' component={LoginScreen} options={{ title: '' }} />
           <Stack.Screen name='register' component={RegisterScreen} options={{ title: 'Registro' }} />
-          <Stack.Screen name='home' component={MapaScreen} options={{ title: 'Escoger ruta' }} />
+          <Stack.Screen name='home' component={MenuScreen} options={{ headerShown: false }} />
           <Stack.Screen name='search' component={SearchScreen} options={{ title: 'Buscar ruta' }} />
           <Stack.Screen name='report' component={ReportScreen} options={{ title: 'Reporte de denuncias' }} />
           <Stack.Screen name='emergency' component={EmergencyScreen} options={{ title: '' }} />
           <Stack.Screen name='lista' component={ListScreen} options={{ title: 'Denuncias' }} />
+          <Stack.Screen name='survay' component={SurvayScreen} options={{ title: 'Encuesta' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </MainContextScreen>
+
   );
 }

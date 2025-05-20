@@ -5,13 +5,12 @@ import * as Location from 'expo-location';
 import { customMapStyle } from '../utils/CustomStyle';
 import { MainContext } from '../contexts/MainContextScreen';
 import axios from 'axios';
-import { CONFIG } from '../../config';
-import polyline from '@mapbox/polyline';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getDistance } from 'geolib'; // Importar correctamente getDistance desde geolib
-import { dangerPlaces } from '../dangerPlaces'; // Asegúrate de ajustar la ruta según tu estructura de carpetas
+import { getDistance } from 'geolib';
+import { dangerPlaces } from '../dangerPlaces';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -52,11 +51,11 @@ export default function MapaScreen() {
 
     const getRouteDirections = async () => {
         if (!position || !destination) return;
-        const url = `http://192.168.18.8:8000/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
+        const url = `https://routeapi-hybsezeph2f3bncu.eastus-01.azurewebsites.net/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
         axios.get(url)
             .then(response => {
                 setRouteCoords(response.data);
-                //sendNotification();
+                sendNotification();
             })
             .catch(error => {
                 Alert.alert('Error', 'No se pudo obtener la ruta.');
@@ -103,9 +102,14 @@ export default function MapaScreen() {
             });
         setDangerMarkers(filteredDangerPlaces);
     };
-
+    const [isInvited, setIsInvited] = useState(false);
+    const getUserType = async () => {
+        const userType = await AsyncStorage.getItem('userType');
+        setIsInvited(userType === 'invited');
+    }
     useEffect(() => {
         getPosition();
+        getUserType();
     }, []);
 
     useEffect(() => {
@@ -206,6 +210,13 @@ export default function MapaScreen() {
                         <TouchableOpacity
                             style={styles.modalOption}
                             onPress={() => {
+                                if (isInvited) {
+                                    Alert.alert(
+                                        'Acceso denegado',
+                                        'Solo los usuarios registrados pueden realizar denuncias.',
+                                    )
+                                    return;
+                                }
                                 setMenuVisible(false);
                                 navigation.navigate('lista');
                             }}

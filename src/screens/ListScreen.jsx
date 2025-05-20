@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
     collection,
     onSnapshot,
@@ -8,45 +8,33 @@ import {
 } from 'firebase/firestore';
 import { MaterialIcons } from '@expo/vector-icons';
 import { firestore } from '../firebase';
+import moment from 'moment';
 export const ListScreen = ({ navigation }) => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
-    const fetchReports = () => {
-        setLoading(true);
-
+    useEffect(() => {
         const q = query(
             collection(firestore, 'reports'),
             orderBy('timestamp', 'desc')
         );
-        onSnapshot(
+        const unsubscribe = onSnapshot(
             q,
-            (querySnapshot) => {
-                const reportsList = [];
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    reportsList.push({
-                        id: doc.id,
-                        name: data.name,
-                        dni: data.dni,
-                        address: data.address,
-                        description: data.description,
-                        userId: data.userId,
-                        timestamp: data.timestamp ? data.timestamp.toDate() : null,
-                    });
-                });
-                setReports(reportsList);
+            snap => {
+                const data = snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    timestamp: doc.data().timestamp?.toDate() ?? null,
+                }));
+                setReports(data);
                 setLoading(false);
             },
-            (error) => {
-                console.error(error);
+            err => {
+                console.error(err);
                 Alert.alert('Error', 'No se pudieron obtener las denuncias.');
                 setLoading(false);
             }
         );
-    };
-
-    useEffect(() => {
-        fetchReports();
+        return () => unsubscribe();
     }, []);
     const renderReport = ({ item }) => (
         <View style={styles.reportItem}>
@@ -55,7 +43,7 @@ export const ListScreen = ({ navigation }) => {
             <Text style={styles.reportDetail}>{item.address}</Text>
             <Text style={styles.reportDescription}>{item.description}</Text>
             <Text style={styles.reportTimestamp}>
-                {item.timestamp ? item.timestamp.toLocaleString() : ''}
+                {item.timestamp ? moment(item.timestamp).format('DD/MM/YYYY hh:mm') : ''}
             </Text>
         </View>
     );

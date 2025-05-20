@@ -25,7 +25,8 @@
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_BACKGROUND_LOCATION",
+        "android.permission.CALL_PHONE"
       ],
       "config": {
         "googleMaps": {
@@ -40,7 +41,8 @@
     },
     "extra": {
       "eas": {
-        "projectId": "40ed58e5-9efc-4d55-ab0f-7061309786fc"
+        "projectId": "40ed58e5-9efc-4d55-ab0f-7061309786fc",
+        "googleWebClientId": "1:288405510760:web:499533a58315c8edce39dd"
       }
     },
     "owner": "carlosordazhoyos"
