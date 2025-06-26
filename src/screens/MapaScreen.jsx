@@ -51,7 +51,7 @@ export default function MapaScreen() {
 
     const getRouteDirections = async () => {
         if (!position || !destination) return;
-        const url = `https://routeapi-hybsezeph2f3bncu.eastus-01.azurewebsites.net/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
+        const url = `https://routes-api-b4hpesf8dfe8bqhz.eastus-01.azurewebsites.net/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
         axios.get(url)
             .then(response => {
                 setRouteCoords(response.data);
