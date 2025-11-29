@@ -1,219 +1,310 @@
-// ReportScreen.js
-import React, { useState } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    Alert,
-    Platform,
-} from 'react-native';
-import {
-    collection,
-    addDoc,
-    serverTimestamp,
-} from 'firebase/firestore';
-import { firestore, auth } from '../firebase';
-export default function ReportScreen({ navigation }) {
-    const [name, setName] = useState('');
-    const [dni, setDni] = useState('');
-    const [address, setAddress] = useState('');
-    const [description, setDescription] = useState('');
-    const [isSending, setIsSending] = useState(false);
-    const handleSubmit = async () => {
-        if (isSending) return;
-        setIsSending(true);
-        if (name.trim() === '') {
-            Alert.alert('Error', 'Por favor, ingresa tu nombre.');
-            return;
-        }
-        if (dni.trim() === '') {
-            Alert.alert('Error', 'Por favor, ingresa tu DNI.');
-            return;
-        }
-        if (address.trim() === '') {
-            Alert.alert('Error', 'Por favor, ingresa tu dirección.');
-            return;
-        }
-        if (description.trim() === '') {
-            Alert.alert('Error', 'Por favor, describe tu denuncia.');
-            return;
-        }
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
+import React, { useContext, useEffect, useState } from 'react'
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import FAIcon from 'react-native-vector-icons/FontAwesome5';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CONFIG } from '../../config';
+import { MainContext } from '../contexts/MainContextScreen';
+import { Alert } from 'react-native';
 
+export default function SearchScreen({ navigation }) {
+    const [results, setResults] = useState([]);
+    const [recientes, setRecientes] = useState([]);
+    const [searchText, setSearchText] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { position, setDestination } = useContext(MainContext);
+
+    const saveReciente = async (place) => {
         try {
-            const user = auth.currentUser;
-            if (!user) {
-                Alert.alert('Error', 'Debes estar logueado para enviar una denuncia.');
-                navigation.navigate('login');
-                return;
-            }
-            const userId = user.uid;
-            await addDoc(collection(firestore, 'reports'), {
-                name,
-                dni,
-                address,
-                description,
-                userId,
-                timestamp: serverTimestamp(),
-            });
-            Alert.alert('Éxito', 'Denuncia enviada correctamente.');
-            setName('');
-            setDni('');
-            setAddress('');
-            setDescription('');
-            setIsSending(false);
+            let aux = [place, ...recientes].slice(0, 6);
+            await AsyncStorage.setItem('places', JSON.stringify(aux));
+            setRecientes(aux);
         } catch (error) {
-            setIsSending(false);
-            console.error(error);
-            Alert.alert('Error', 'No se pudo enviar la denuncia. Inténtalo de nuevo.');
+            console.error('Error al guardar reciente:', error);
         }
-    };
+    }
 
+    const getRecientes = async () => {
+        try {
+            const arr = await AsyncStorage.getItem('places');
+            if (arr) {
+                setRecientes(JSON.parse(arr));
+            }
+        } catch (error) {
+            console.error('Error al obtener recientes:', error);
+        }
+    }
 
+    useEffect(() => {
+        getRecientes();
+    }, [])
+
+    const getSites = (value) => {
+        setSearchText(value);
+
+        if (!value || value.trim() === "") {
+            setResults([]);
+            return;
+        }
+
+        if (!position) {
+            Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
+            return;
+        }
+
+        setLoading(true);
+
+        const requestData = {
+            input: value,
+            locationBias: {
+                circle: {
+                    center: position,
+                    radius: 20000.0
+                }
+            },
+            languageCode: 'es'
+        };
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': CONFIG.apiKey
+        };
+
+        axios.post(CONFIG.uriMap, requestData, { headers })
+            .then(response => {
+                setResults(response.data.suggestions || []);
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error('Error en la solicitud:', error.response?.data || error.message);
+                setLoading(false);
+
+                if (error.response?.status === 403) {
+                    Alert.alert(
+                        'Error de configuración',
+                        'La API Key no está configurada correctamente. Por favor, verifica la configuración en Google Cloud Console.',
+                        [{ text: 'OK', onPress: () => navigation.goBack() }]
+                    );
+                } else {
+                    Alert.alert('Error', 'No se pudieron cargar los resultados. Inténtalo de nuevo.');
+                }
+            });
+    }
+
+    const positionDestination = (value) => {
+        setLoading(true);
+
+        const placeId = value.placePrediction.placeId;
+        const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}`;
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': CONFIG.apiKey,
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,location'
+        };
+
+        axios.get(detailsUrl, { headers })
+            .then(response => {
+                const place = response.data;
+                const name = place.displayName?.text || 'Lugar sin nombre';
+                const address = place.formattedAddress || '';
+                const latitude = place.location?.latitude;
+                const longitude = place.location?.longitude;
+
+                if (!latitude || !longitude) {
+                    throw new Error('No se pudo obtener la ubicación del lugar');
+                }
+
+                setDestination({ longitude, latitude, name, address });
+                saveReciente({ latitude, longitude, name, address });
+                setLoading(false);
+                navigation.navigate('map');
+            })
+            .catch(error => {
+                console.error('Error al obtener detalles:', error.response?.data || error.message);
+                setLoading(false);
+
+                if (error.response?.status === 403) {
+                    Alert.alert(
+                        'Error de configuración',
+                        'No se puede acceder a los detalles del lugar. Verifica la configuración de la API Key.'
+                    );
+                } else {
+                    Alert.alert('Error', 'No se pudieron obtener los detalles del lugar. Inténtalo de nuevo.');
+                }
+            });
+    }
+
+    const positionSaved = (place) => {
+        const { latitude, longitude, name, address } = place;
+        setDestination({ longitude, latitude, name, address });
+        navigation.navigate('map');
+    }
+
+    const clearSearch = () => {
+        setSearchText('');
+        setResults([]);
+    }
+
+    const renderSearchResult = ({ item }) => (
+        <TouchableOpacity
+            style={styles.resultItem}
+            onPress={() => positionDestination(item)}
+            activeOpacity={0.7}
+        >
+            <View style={styles.iconCircle}>
+                <FAIcon name="map-marker-alt" size={18} color="#05274B" />
+            </View>
+            <View style={styles.resultTextContainer}>
+                <Text style={styles.resultText} numberOfLines={1}>
+                    {item.placePrediction.text.text}
+                </Text>
+                <Text style={styles.resultSubtext} numberOfLines={1}>
+                    {item.placePrediction.structuredFormat?.secondaryText?.text || ''}
+                </Text>
+            </View>
+            <Icon name="chevron-right" size={24} color="#CCCCCC" />
+        </TouchableOpacity>
+    );
+
+    const renderRecentItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.resultItem}
+            onPress={() => positionSaved(item)}
+            activeOpacity={0.7}
+        >
+            <View style={[styles.iconCircle, { backgroundColor: '#F0F4FF' }]}>
+                <Icon name="history" size={20} color="#05274B" />
+            </View>
+            <View style={styles.resultTextContainer}>
+                <Text style={styles.resultText} numberOfLines={1}>
+                    {item.name}
+                </Text>
+                <Text style={styles.resultSubtext} numberOfLines={1}>
+                    {item.address}
+                </Text>
+            </View>
+            <Icon name="chevron-right" size={24} color="#CCCCCC" />
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            <View style={styles.formContainer}>
-                <Text style={[styles.formTitle, { color: 'black' }]}>Registrar Denuncia</Text>
-
-                <TextInput
-                    style={{ paddingVertical: 20, paddingHorizontal: 15, borderColor: '#EEF1F7', borderWidth: 1, marginTop: 20, fontSize: 15, backgroundColor: '#F7F8F9' }}
-                    placeholder="Nombre"
-                    value={name}
-                    onChangeText={setName}
-                />
-
-                <TextInput
-                    style={{ paddingVertical: 20, paddingHorizontal: 15, borderColor: '#EEF1F7', borderWidth: 1, marginTop: 10, fontSize: 15, backgroundColor: '#F7F8F9' }}
-                    placeholder="DNI"
-                    value={dni}
-                    onChangeText={setDni}
-                    keyboardType="numeric"
-                />
-
-                <TextInput
-                    style={{ paddingVertical: 20, paddingHorizontal: 15, borderColor: '#EEF1F7', borderWidth: 1, marginTop: 10, fontSize: 15, backgroundColor: '#F7F8F9' }}
-                    placeholder="Dirección"
-                    value={address}
-                    onChangeText={setAddress}
-                />
-
-                <TextInput
-                    style={{ paddingVertical: 20, paddingHorizontal: 15, borderColor: '#EEF1F7', borderWidth: 1, marginTop: 20, fontSize: 15, backgroundColor: '#F7F8F9', height: 100 }}
-                    placeholder="Descripción de la denuncia"
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                    numberOfLines={4}
-                />
-
-                <TouchableOpacity
-                    style={{ backgroundColor: '#1E232C', paddingVertical: 20, marginTop: 10, borderRadius: 5 }}
-                    onPress={handleSubmit}>
-                    <Text
-                        style={{ textAlign: 'center', color: 'white', fontWeight: 'bold' }}
-                    >{isSending ? 'Enviando..' : 'Enviar Denuncia'}</Text>
-                </TouchableOpacity>
+            <View style={styles.searchContainer}>
+                <View style={styles.searchBar}>
+                    <Icon name="search" size={24} color="#666" />
+                    <TextInput
+                        onChangeText={getSites}
+                        value={searchText}
+                        style={styles.searchInput}
+                        placeholder='¿A dónde quieres ir?'
+                        placeholderTextColor='#999'
+                        autoFocus
+                    />
+                    {searchText.length > 0 && (
+                        <TouchableOpacity onPress={clearSearch}>
+                            <Icon name="close" size={24} color="#666" />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
-            {/* Separador */}
-            <View style={styles.separator} />
+            {loading && (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#05274B" />
+                    <Text style={styles.loadingText}>Buscando lugares...</Text>
+                </View>
+            )}
 
-            {/* Lista de Denuncias */}
+            {!loading && results.length > 0 && (
+                <FlatList
+                    data={results}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={renderSearchResult}
+                    style={styles.resultsList}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
 
+            {!loading && results.length === 0 && recientes.length > 0 && (
+                <View style={styles.recentsContainer}>
+                    <View style={styles.recentsHeader}>
+                        <Icon name="history" size={24} color="#05274B" />
+                        <Text style={styles.recentsTitle}>Búsquedas recientes</Text>
+                    </View>
+                    <FlatList
+                        data={recientes}
+                        keyExtractor={(item, index) => index.toString()}
+                        renderItem={renderRecentItem}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </View>
+            )}
+
+            {!loading && results.length === 0 && recientes.length === 0 && searchText.length === 0 && (
+                <View style={styles.emptyContainer}>
+                    <FAIcon name="search-location" size={64} color="#CCCCCC" />
+                    <Text style={styles.emptyTitle}>Busca un lugar</Text>
+                    <Text style={styles.emptyText}>
+                        Escribe una dirección, lugar o punto de interés
+                    </Text>
+                </View>
+            )}
         </View>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#fff',
+    container: { flex: 1, backgroundColor: '#F5F7FA' },
+    searchContainer: {
+        backgroundColor: 'white',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
     },
-    formContainer: {
-        marginBottom: 20,
-    },
-    formTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: '#5568FE',
-        textAlign: 'center',
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#CCCCCC',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: Platform.OS === 'ios' ? 15 : 10, // Uso de Platform
-        fontSize: 16,
-        marginBottom: 10,
-    },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top', // Para Android
-    },
-    button: {
-        backgroundColor: '#5568FE',
-        paddingVertical: 15,
-        borderRadius: 8,
+    searchBar: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
+        backgroundColor: '#F7F8F9',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 12,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+    searchInput: { flex: 1, fontSize: 16, color: '#333' },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+    loadingText: { fontSize: 16, color: '#666' },
+    resultsList: { flex: 1 },
+    resultItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        gap: 12,
     },
-    separator: {
-        height: 1,
-        backgroundColor: '#EEEEEE',
-        marginVertical: 20,
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0F4FF',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    listContainer: {
-        flex: 1,
-    },
-    listTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#5568FE',
-        textAlign: 'center',
-    },
-    reportItem: {
-        backgroundColor: '#F9F9F9',
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 10,
-        borderLeftWidth: 5,
-        borderLeftColor: '#5568FE',
-    },
-    reportTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    reportDetail: {
-        fontSize: 14,
-        color: '#555555',
-    },
-    reportDescription: {
-        fontSize: 16,
-        marginTop: 10,
-        color: '#333333',
-    },
-    reportTimestamp: {
-        fontSize: 12,
-        color: '#999999',
-        marginTop: 10,
-        textAlign: 'right',
-    },
-    noReportsText: {
-        fontSize: 16,
-        color: '#777777',
-        textAlign: 'center',
-        marginTop: 20,
-    },
+    resultTextContainer: { flex: 1 },
+    resultText: { fontSize: 16, fontWeight: '600', color: '#1E232C', marginBottom: 4 },
+    resultSubtext: { fontSize: 13, color: '#666' },
+    recentsContainer: { flex: 1, backgroundColor: 'white', paddingTop: 16 },
+    recentsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, gap: 10 },
+    recentsTitle: { fontSize: 18, fontWeight: 'bold', color: '#05274B' },
+    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+    emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1E232C', marginTop: 20, marginBottom: 8 },
+    emptyText: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
 });

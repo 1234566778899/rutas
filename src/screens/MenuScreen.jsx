@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MapaScreen from './MapaScreen';
 import ProfileScreen from './ProfileScreen';
 import EmergyScreen from './EmergyScreen';
+import { ListScreen } from './ListScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +21,8 @@ export default function MenuScreen() {
                         iconName = focused ? 'person' : 'person-outline';
                     } else if (route.name === 'emergy') {
                         iconName = focused ? 'warning' : 'warning-outline';
+                    } else if (route.name === 'denuncias') {
+                        iconName = focused ? 'megaphone' : 'megaphone-outline';
                     }
                     return <Ionicons name={iconName} size={size} color={color} />;
                 },
@@ -29,42 +32,20 @@ export default function MenuScreen() {
                     height: 60,
                     paddingTop: 5
                 },
+                headerStyle: {
+                    backgroundColor: '#05274B',
+                },
+                headerTintColor: '#fff',
+                headerTitleStyle: {
+                    fontWeight: 'bold',
+                    color: 'white',
+                },
             })}
         >
-            <Tab.Screen
-                name="map"
-                options={{ title: 'Buscar' }}
-                component={MapaScreen}
-            />
-            <Tab.Screen
-                name="emergy"
-                options={{
-                    title: 'Emergencia',
-                    headerStyle: {
-                        backgroundColor: '#222',
-                    },
-                    headerTitleStyle: {
-                        color: 'white',
-                    },
-                }}
-                component={EmergyScreen}
-            />
-
-            <Tab.Screen
-                name="profile"
-                options={{
-                    title: 'Mi Perfil',
-                    headerStyle: {
-                        backgroundColor: '#222',
-                    },
-                    headerTitleStyle: {
-                        color: 'white',
-                    },
-                }}
-                component={ProfileScreen}
-
-            />
-
+            <Tab.Screen name="map" options={{ title: 'Buscar' }} component={MapaScreen} />
+            <Tab.Screen name="emergy" options={{ title: 'Emergencia' }} component={EmergyScreen} />
+            <Tab.Screen name="denuncias" options={{ title: 'Denuncias' }} component={ListScreen} />
+            <Tab.Screen name="profile" options={{ title: 'Mi Perfil' }} component={ProfileScreen} />
         </Tab.Navigator>
     );
 }

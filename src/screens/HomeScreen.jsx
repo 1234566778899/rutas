@@ -11,8 +11,14 @@ export default function HomeScreen({ navigation }) {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
             <View style={{ flex: 1 }}>
-                <Image src='https://storage.googleapis.com/staging.ugel-app.appspot.com/home.png' style={{ width: '100%', height: '50%' }} />
-                <View style={{ padding: 20, position: 'absolute', bottom: 20, left: 0, width: '100%' }}>
+                <View style={{ alignItems: 'center', paddingTop: 150 }}>
+                    <Image
+                        source={require('../assets/logo.png')}
+                        style={{ width: 130, height: 130 }}
+                        resizeMode="contain"
+                    />
+                </View>
+                <View style={{ padding: 20, width: '100%', marginTop: 30 }}>
                     <TouchableOpacity
                         onPress={() => enterApplication('user', 'login')}
                         style={{ backgroundColor: 'black', borderRadius: 10, paddingVertical: 20 }}>

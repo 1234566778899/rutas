@@ -3,6 +3,7 @@
     "newArchEnabled": true,
     "name": "Lima Secure",
     "slug": "cercaya",
+    "scheme": "cercaya",  
     "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,7 +31,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyASTGwtuWbfdxd-qWIleIB9ypTAVMc9BpA"
+          "apiKey": "AIzaSyB06ogF7GTzbQe05qzUjZxc2zOFLRF8lfo"
         }
       },
       "package": "com.carlosordaz.cercaya",

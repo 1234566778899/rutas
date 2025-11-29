@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import { customMapStyle } from '../utils/CustomStyle';
 import { MainContext } from '../contexts/MainContextScreen';
 import axios from 'axios';
-import { MaterialIcons } from '@expo/vector-icons';
+import Icon from 'react-native-vector-icons/MaterialIcons'; // CAMBIO AQUÍ
 import { useNavigation } from '@react-navigation/native';
 import { getDistance } from 'geolib';
 import { dangerPlaces } from '../dangerPlaces';
@@ -20,14 +20,15 @@ Notifications.setNotificationHandler({
     }),
 });
 
-
 export default function MapaScreen() {
     const { setPosition, position, destination } = useContext(MainContext);
     const [routeCoords, setRouteCoords] = useState([]);
     const [menuVisible, setMenuVisible] = useState(false);
     const [dangerMarkers, setDangerMarkers] = useState([]);
+    const [isInvited, setIsInvited] = useState(false);
     const mapRef = useRef(null);
     const navigation = useNavigation();
+    const locationSubscription = useRef(null);
 
     const getPosition = async () => {
         try {
@@ -40,9 +41,29 @@ export default function MapaScreen() {
             const location = await Location.getCurrentPositionAsync({});
             const { latitude, longitude } = location.coords;
             setPosition({ latitude, longitude });
+            
+            startLocationTracking();
         } catch (error) {
             navigation.goBack();
         }
+    };
+
+    const startLocationTracking = async () => {
+        if (locationSubscription.current) {
+            locationSubscription.current.remove();
+        }
+
+        locationSubscription.current = await Location.watchPositionAsync(
+            {
+                accuracy: Location.Accuracy.High,
+                distanceInterval: 10,
+                timeInterval: 5000,
+            },
+            (location) => {
+                const { latitude, longitude } = location.coords;
+                setPosition({ latitude, longitude });
+            }
+        );
     };
 
     const handleSearch = () => {
@@ -51,16 +72,16 @@ export default function MapaScreen() {
 
     const getRouteDirections = async () => {
         if (!position || !destination) return;
-        const url = `https://routes-api-b4hpesf8dfe8bqhz.eastus-01.azurewebsites.net/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
+        const url = `https://routes-app-htfcceb6gucecect.canadacentral-01.azurewebsites.net/route?origen_lat=${position.latitude}&origen_lon=${position.longitude}&destino_lat=${destination.latitude}&destino_lon=${destination.longitude}`
         axios.get(url)
             .then(response => {
                 setRouteCoords(response.data);
-                sendNotification();
             })
             .catch(error => {
                 Alert.alert('Error', 'No se pudo obtener la ruta.');
             })
     };
+
     const sendNotification = async () => {
         const recomendacionesViaje = [
             "Evita zonas poco iluminadas por la noche.",
@@ -102,19 +123,32 @@ export default function MapaScreen() {
             });
         setDangerMarkers(filteredDangerPlaces);
     };
-    const [isInvited, setIsInvited] = useState(false);
+
     const getUserType = async () => {
         const userType = await AsyncStorage.getItem('userType');
         setIsInvited(userType === 'invited');
     }
+
     useEffect(() => {
         getPosition();
         getUserType();
+
+        return () => {
+            if (locationSubscription.current) {
+                locationSubscription.current.remove();
+            }
+        };
     }, []);
 
     useEffect(() => {
-        if (destination) {
+        if (destination && position) {
             getRouteDirections();
+        }
+    }, [position, destination]);
+
+    useEffect(() => {
+        if (destination) {
+            sendNotification();
         }
     }, [destination]);
 
@@ -187,17 +221,21 @@ export default function MapaScreen() {
                     <Circle
                         key={`danger-circle-${index}`}
                         center={marker}
-                        radius={50} // Radio en metros
-                        strokeColor="rgba(255, 0, 0, 0.8)" // Color del borde del círculo
-                        fillColor="rgba(255, 0, 0, 0.3)" // Color de relleno del círculo
+                        radius={50}
+                        strokeColor="rgba(255, 0, 0, 1)"
+                        fillColor="rgba(255, 0, 0, 0.3)"
                     />
                 ))}
-
             </MapView>
             <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
+                onPress={() => navigation.navigate('report')}
                 style={{ position: 'absolute', bottom: 20, right: 20, borderRadius: 10, backgroundColor: 'white', padding: 10, elevation: 5 }}>
-                <MaterialIcons name="emergency-share" size={40} color="black" />
+                <Icon name="emergency-share" size={40} color="black" />
+            </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('emergency')}
+                style={{ position: 'absolute', bottom: 100, right: 20, borderRadius: 10, backgroundColor: 'white', padding: 10, elevation: 5 }}>
+                <Icon name="sensors" size={40} color="red" />
             </TouchableOpacity>
             <Modal
                 visible={menuVisible}
